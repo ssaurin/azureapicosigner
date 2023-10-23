@@ -1,0 +1,117 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
+    "handler": "Microsoft.Azure.CreateUIDef",
+    "version": "0.1.2-preview",
+    "parameters": {
+        "basics": [
+            {
+                "name": "vmName",
+                "type": "Microsoft.Common.TextBox",
+                "label": "Virtual Machine name",
+                "toolTip": "The name of the Virtual Machine.",
+                "defaultValue": "linux-vm",
+                "constraints": {
+                    "required": true,
+                    "regex": "^[a-z0-9A-Z-]{3,79}$",
+                    "validationMessage": "The VM Name must be between 3 and 79 characters long and contain letters, numbers and hyphens only."
+                }
+            },
+            {
+                "name": "vmSize",
+                "type": "Microsoft.Compute.SizeSelector",
+                "label": "Virtual machine size",
+                "toolTip": "The size of virtual machine to provision.",
+                "defaultValue": "Standard_DC4s_v3",
+                "recommendedSizes": [
+                    "Standard_DC2s_v3",
+                    "Standard_DC4s_v3"
+                ],
+                "osPlatform": "Linux",
+                "count": "1"
+            },
+            {
+                "name": "adminUsername",
+                "type": "Microsoft.Compute.UserNameTextBox",
+                "label": "Username",
+                "toolTip": "Admin username for the machine",
+                "osPlatform": "Linux",
+                "constraints": {
+                    "required": true
+                }
+            },
+            {
+                "name": "SSHCredentials",
+                "type": "Microsoft.Compute.CredentialsCombo",
+                "label": {
+                    "authenticationType": "Authentication type",
+                    "password": "Password",
+                    "confirmPassword": "Confirm password",
+                    "sshPublicKey": "SSH public key"
+                },
+                "toolTip": {
+                    "authenticationType": "Authentication Type for the Virtual Machine",
+                    "password": "Password for the Virtual Machine",
+                    "sshPublicKey": "SSH Public Key for the Virtual Machine"
+                },
+                "constraints": {
+                    "required": true,
+                    "customPasswordRegex": "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{12,}$",
+                    "customValidationMessage": "The password must be alphanumeric, contain at least 12 characters, and have at least 1 letter and 1 number."
+                },
+                "options": {
+                    "hideConfirmation": false,
+                    "hidePassword": false
+                },
+                "osPlatform": "Linux",
+                "visible": true
+            }
+        ],
+        "steps": [
+            {
+                "name": "APICosignerConfig",
+                "label": "API Cosigner Settings",
+                "subLabel": {
+                    "preValidation": "Configure the API Cosigner machine's resources and settings",
+                    "postValidation": "Done"
+                },
+                "bladeTitle": "API Cosigner Settings",
+                "elements": [
+                    {
+                        "name": "pairingToken",
+                        "type": "Microsoft.Common.TextBox",
+                        "label": "Pairing token from API user in Fireblocks console",
+                        "toolTip": "Copy the pairing token from the API user in the Fireblocks Console and paste it here.",
+                        "constraints": {
+                            "required": true,
+                            "regex": "^.*$",
+                            "validationMessage": "The pairing token must be copied from the Workspace."
+                          }
+                    },
+                    {
+                        "name": "cosignerScriptURL",
+                        "type": "Microsoft.Common.TextBox",
+                        "label": "Azure Cosigner script URL from the Fireblocks console (enclose in double quotes)",
+                        "toolTip": "Copy the Cosigner script URL from the Fireblocks Console and paste it here with opening and closing double quotes.",
+                        "constraints": {
+                            "required": true,
+                            "regex": "^\".*\"$",
+                            "validationMessage": "The cosigner script URL must be copied from the Workspace and must be enclosed in double quotes."
+                          }
+                    }
+                ]
+            }
+        ],
+        "outputs": {
+
+            "location": "[location()]",
+            "vmName": "[basics('vmName')]",
+            "adminUsername": "[basics('adminUsername')]",
+            "authenticationType": "[basics('SSHCredentials').authenticationType]",
+            "adminPasswordOrKey": "[coalesce(basics('SSHCredentials').password, basics('SSHCredentials').sshPublicKey)]",
+
+            "vmSize": "[basics('vmSize')]",
+            "pairingToken": "[steps('APICosignerConfig').pairingToken.name]",
+            "cosignerScriptURL": "[steps('APICosignerConfig').cosignerScriptURL.name]"
+        }
+    }
+}
