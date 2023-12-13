@@ -53,6 +53,18 @@
             "metadata": {
                 "description": "Copy the Cosigner script URL from the Fireblocks Console and paste it here with opening and closing double quotes."
             }
+        },
+        "callbackUrl": {
+            "type": "string",
+            "metadata": {
+                "description": "This is the URL for your callback handler.."
+            }
+        },
+        "callbackPublicKey": {
+            "type": "string",
+            "metadata": {
+                "description": "This is the public key for your callback handler."
+            }
         }
     },
     "variables": {
@@ -168,7 +180,7 @@
                 "typeHandlerVersion": "2.0",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "commandToExecute": "[concat('echo { \\\"pairingToken\\\": \\\"', parameters('pairingToken'), '\\\"} > /tmp/pairing-token.json && sudo -i && curl -o /home/', parameters('adminUsername'), '/cosigner ', parameters('cosignerScriptURL'), ' && chmod +x /home/', parameters('adminUsername'), '/cosigner && /home/', parameters('adminUsername'), '/cosigner headless && cp /var/lib/waagent/custom-script/download/0/*.* /home/', parameters('adminUsername'), '/')]"
+                    "commandToExecute": "[concat('echo { \\\"pairingToken\\\": \\\"', parameters('pairingToken'), '\\\", \\\"callbackUrl\\\": \\\"', parameters('callbackUrl'), '\\\", \\\"callbackPublicKey\\\": \\\"', parameters('callbackPublicKey'), '\\\"} > /tmp/pairing-token.json && sudo -i && curl -o /home/', parameters('adminUsername'), '/cosigner ', parameters('cosignerScriptURL'), ' && chmod +x /home/', parameters('adminUsername'), '/cosigner && /home/', parameters('adminUsername'), '/cosigner headless && cp /var/lib/waagent/custom-script/download/0/*.* /home/', parameters('adminUsername'), '/')]"
                 }
             }
         }

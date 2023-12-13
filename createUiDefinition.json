@@ -97,6 +97,28 @@
                             "regex": "^\".*\"$",
                             "validationMessage": "The cosigner script URL must be copied from the Workspace and must be enclosed in double quotes."
                           }
+                    },
+                    {
+                        "name": "callbackUrl",
+                        "type": "Microsoft.Common.TextBox",
+                        "label": "Callback Handler URL",
+                        "toolTip": "This is the URL for your callback handler.",
+                        "constraints": {
+                            "required": false,
+                            "regex": "^https:\\/\\/[a-zA-Z0-9\\-\\.]+\\.[a-zA-Z]{2,}(\\/[^\\s]*)?$",
+                            "validationMessage": "The callback handler must be a HTTPS URL."
+                          }
+                    },
+                    {
+                        "name": "callbackPublicKey",
+                        "type": "Microsoft.Common.TextBox",
+                        "label": "Public key for the callback handler",
+                        "toolTip": "This is the public key for your callback handler.",
+                        "constraints": {
+                            "required": false,
+                            "regex": "^.*$",
+                            "validationMessage": "Please check the public key for the callback handler."
+                          }
                     }
                 ]
             }
@@ -111,7 +133,9 @@
 
             "vmSize": "[basics('vmSize')]",
             "pairingToken": "[steps('APICosignerConfig').pairingToken.name]",
-            "cosignerScriptURL": "[steps('APICosignerConfig').cosignerScriptURL.name]"
+            "cosignerScriptURL": "[steps('APICosignerConfig').cosignerScriptURL.name]",
+            "callbackUrl": "[steps('APICosignerConfig').callbackUrl.name]",
+            "callbackPublicKey": "[steps('APICosignerConfig').callbackPublicKey.name]"
         }
     }
 }
