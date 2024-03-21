@@ -1,0 +1,188 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vmName": {
+            "type": "string"
+        },
+        "location": {
+          "type": "string",
+          "defaultValue": "[resourceGroup().location]",
+          "metadata": {
+            "description": "Location for all resources. Leave empty to use the resource group's location."
+          }
+        },
+        "adminUsername": {
+            "type": "string",
+            "metadata": {
+                "description": "Specifies an admin username for the Virtual Machine."
+            }
+        },
+        "authenticationType": {
+          "type": "string",
+          "defaultValue": "sshPublicKey",
+          "allowedValues": [
+            "password",
+            "sshPublicKey"
+          ],
+          "metadata": {
+            "description": "Type of authentication to use on the Virtual Machine."
+          }
+        },
+        "adminPasswordOrKey": {
+          "type": "securestring",
+          "metadata": {
+            "description": "Password or ssh key for the Virtual Machine."
+          }
+        },
+        "vmSize": {
+            "defaultValue": "Standard_DC4s_v3",
+            "type": "string",
+            "metadata": {
+                "description": "Click on change size and select a SGX-enabled confidential compute VM"
+            }
+        },
+        "pairingToken": {
+            "type": "string",
+            "metadata": {
+                "description": "Copy the pairing token from the API user in the Fireblocks Console and paste it here."
+            }
+        },
+        "cosignerScriptURL": {
+            "type": "string",
+            "metadata": {
+                "description": "Copy the Cosigner script URL from the Fireblocks Console and paste it here with opening and closing double quotes."
+            }
+        },
+        "callbackUrl": {
+            "type": "string",
+            "metadata": {
+                "description": "This is the URL for your callback handler.."
+            }
+        },
+        "callbackPublicKey": {
+            "type": "string",
+            "metadata": {
+                "description": "This is the public key for your callback handler."
+            }
+        }
+    },
+    "variables": {
+        "networkInterfaceName": "[concat(parameters('vmName'), '-nic')]",
+        "vNetName": "[concat(parameters('vmName'), '-vnet')]",
+        "vNetSubnetName": "default",
+        "vNetSubnetAddressPrefix": "10.0.0.0/24",
+        "linuxConfiguration": {
+          "disablePasswordAuthentication": true,
+          "ssh": {
+            "publicKeys": [
+              {
+                "path": "[concat('/home/', parameters('adminUsername'), '/.ssh/authorized_keys')]",
+                "keyData": "[parameters('adminPasswordOrKey')]"
+              }
+            ]
+          }
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2022-07-01",
+            "name": "[variables('vNetName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/16"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('vNetSubnetName')]",
+                        "properties": {
+                            "addressPrefix": "[variables('vNetSubnetAddressPrefix')]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2022-07-01",
+            "name": "[variables('networkInterfaceName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('vNetName'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                              "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vNetName'), variables('vNetSubnetName'))]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2021-11-01",
+            "name": "[parameters('vmName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('vmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('vmName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPasswordOrKey')]",
+                    "linuxConfiguration": "[if(equals(parameters('authenticationType'), 'password'), json('null'), variables('linuxConfiguration'))]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "canonical",
+                        "offer": "0001-com-ubuntu-server-focal",
+                        "sku": "20_04-lts-gen2",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "createOption": "fromImage"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName'))]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('vmName'), '/cosignerscript')]",
+            "apiVersion": "2022-11-01",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.Azure.Extensions",
+                "type": "CustomScript",
+                "typeHandlerVersion": "2.0",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "commandToExecute": "[concat('echo { \\\"pairingToken\\\": \\\"', parameters('pairingToken'), '\\\", \\\"callbackUrl\\\": \\\"', parameters('callbackUrl'), '\\\", \\\"callbackPublicKey\\\": \\\"', parameters('callbackPublicKey'), '\\\"} > /tmp/pairing-token.json && sudo -i && curl -o /home/', parameters('adminUsername'), '/cosigner ', parameters('cosignerScriptURL'), ' && chmod +x /home/', parameters('adminUsername'), '/cosigner && /home/', parameters('adminUsername'), '/cosigner headless && cp /var/lib/waagent/custom-script/download/0/*.* /home/', parameters('adminUsername'), '/')]"
+                }
+            }
+        }
+    ]
+}
