@@ -56,12 +56,14 @@
         },
         "callbackUrl": {
             "type": "string",
+            "defaultValue": "none"
             "metadata": {
                 "description": "This is the URL for your callback handler.."
             }
         },
         "callbackPublicKey": {
             "type": "string",
+            "defaultValue": "none"
             "metadata": {
                 "description": "This is the public key for your callback handler."
             }
